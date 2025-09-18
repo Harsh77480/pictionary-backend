@@ -20,6 +20,7 @@ const io = new Server(server, {
 // init manager with io
 gameManager.init(io);
 
+
 // handshake origin check (defense in depth)
 io.use((socket, next) => {
   try {
@@ -36,9 +37,29 @@ io.use((socket, next) => {
 app.get('/health', (req, res) => res.json({ ok: true }));
 app.get('/active-games', (req, res) => res.json({ active: gameManager.getActiveGames() }));
 
+
 io.on('connection', (socket) => {
+  
+  
   console.log('Client connected', socket.id);
   registerHandlers(io, socket);
+
+  //rate limiting on socket events 
+  var EVENTS = 50;var TIME = 1000;// 50 events/second  
+
+  const interval = setInterval(() => {
+    socket.messageCount = 0;
+  }, TIME); 
+
+  socket.use((packet, next) => {
+  socket.messageCount++;
+    if (socket.messageCount > EVENTS) {return;}
+    next();
+  });
+  socket.on("disconnect", () => clearInterval(interval));
+  // ------- ends here 
+
+
 });
 
 server.listen(PORT, () => {
