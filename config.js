@@ -1,8 +1,11 @@
 require('dotenv').config();
 
 module.exports = {
+  
+  //limiting connections 
   PORT: parseInt(process.env.PORT || '4000', 10),
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
+  MAX_CONNECTIONS: parseInt(process.env.MAX_CONNECTIONS || '15', 10),
 
   MAX_GAMES: parseInt(process.env.MAX_GAMES || '5', 10),
   MAX_USERS_PER_GAME: parseInt(process.env.MAX_USERS_PER_GAME || '4', 10),
@@ -21,5 +24,7 @@ module.exports = {
 
   // scoring
   POINTS_GUESSER: parseInt(process.env.POINTS_GUESSER || '10', 10),
-  POINTS_DRAWER: parseInt(process.env.POINTS_DRAWER || '5', 10)
+  POINTS_DRAWER: parseInt(process.env.POINTS_DRAWER || '5', 10),
+
+  //rate limiting 
 };

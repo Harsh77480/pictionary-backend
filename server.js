@@ -2,21 +2,32 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-
+const rateLimit = require("express-rate-limit");
 const { PORT, FRONTEND_ORIGIN } = require('./config');
 const { registerHandlers } = require('./socket/handlers');
 const gameManager = require('./utils/gameManager');
 const sanitizeInput = require("./utils/sanitizer");
+const { MAX_CONNECTIONS } = require("./config");
 
 const app = express();
 const server = http.createServer(app);
 
-
-// sanitizing http middleware 
+// sanitizing and http middleware (not usefull here but just in case)
 app.use((req, res, next) => {
+  
+  //http santize 
   if (req.body) req.body = sanitizeInput(req.body);
   if (req.query) req.query = sanitizeInput(req.query);
   if (req.params) req.params = sanitizeInput(req.params);
+
+  //http ratelimit
+  rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,             // 60 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  });  
+
   next();
 }); 
 
@@ -57,13 +68,29 @@ io.use((socket, next) => {
   }
 });
 
-app.get('/health', (req, res) => res.json({ ok: true }));
-app.get('/active-games', (req, res) => res.json({ active: gameManager.getActiveGames() }));
 
+
+// app.get('/health', (req, res) => res.json({ ok: true }));
+// app.get('/active-games', (req, res) => res.json({ active: gameManager.getActiveGames() }));
+
+
+
+
+// limit the total number connection 
+let connectionCount = 0;
 
 io.on('connection', (socket) => {
   
-  
+  console.log(connectionCount,MAX_CONNECTIONS);
+  // --- limited connection at a time 
+  if (connectionCount >= MAX_CONNECTIONS) {
+    console.warn("⚠️ Too many connections, rejecting:", socket.id);
+    socket.emit("error", "Server is full. Try again later.");
+    return socket.disconnect(true);
+  }
+  connectionCount++;
+  // ends here (on disconnect we decrease the counter)
+
   console.log('Client connected', socket.id);
   registerHandlers(io, socket);
 
@@ -79,10 +106,9 @@ io.on('connection', (socket) => {
     if (socket.messageCount > EVENTS) {return;}
     next();
   });
-  socket.on("disconnect", () => clearInterval(interval));
-  // ------- ends here 
-
-
+  // ------- ends here (on disconnect we clear the interval)
+  
+  socket.on("disconnect", () => {clearInterval(interval); connectionCount--;});
 });
 
 server.listen(PORT, () => {

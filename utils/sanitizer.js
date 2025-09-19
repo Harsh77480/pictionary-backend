@@ -23,5 +23,4 @@ function sanitizeInput(data) {
 
 
 
-module.exports = sanitizeMiddleware;
 module.exports = sanitizeInput;
