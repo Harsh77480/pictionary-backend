@@ -6,9 +6,19 @@ const { Server } = require('socket.io');
 const { PORT, FRONTEND_ORIGIN } = require('./config');
 const { registerHandlers } = require('./socket/handlers');
 const gameManager = require('./utils/gameManager');
+const sanitizeInput = require("./utils/sanitizer");
 
 const app = express();
 const server = http.createServer(app);
+
+
+// sanitizing http middleware 
+app.use((req, res, next) => {
+  if (req.body) req.body = sanitizeInput(req.body);
+  if (req.query) req.query = sanitizeInput(req.query);
+  if (req.params) req.params = sanitizeInput(req.params);
+  next();
+}); 
 
 const io = new Server(server, {
   cors: {
@@ -20,6 +30,19 @@ const io = new Server(server, {
 // init manager with io
 gameManager.init(io);
 
+// middleware wss santize
+  io.use((socket, next) => {
+    const origOn = socket.on.bind(socket);
+    socket.on = (event, handler) => {
+       origOn(event, (...args) => {
+        // Sanitize all arguments (not just first one)
+        const cleanArgs = args.map(sanitizeInput);
+        console.log(cleanArgs);
+        handler(...cleanArgs);
+      });
+    };
+    next();
+  });
 
 // handshake origin check (defense in depth)
 io.use((socket, next) => {
