@@ -51,9 +51,28 @@ function validateChatMessage(msg) {
   return typeof msg === 'string' && msg.trim().length > 0 && msg.trim().length <= CHAT_MAX_LENGTH;
 }
 
+const axios = require('axios');
+
+// Function to verify reCAPTCHA
+const verifyRecaptcha = async (recaptchaToken) => {
+  const url = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`;
+
+  try {
+    const response = await axios.post(url);
+    const data = response.data;
+
+    if (!data.success) {
+      throw new Error('reCAPTCHA verification failed');
+    }
+  } catch (error) {
+    throw new Error('reCAPTCHA verification failed: ' + error.message);
+  }
+};
+
 module.exports = {
   validateStrokeStart,
   validateDrawBatch,
   validateName,
-  validateChatMessage
+  validateChatMessage,
+  verifyRecaptcha
 };

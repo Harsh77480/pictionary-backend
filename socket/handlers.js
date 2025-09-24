@@ -4,7 +4,9 @@ const {
   validateStrokeStart,
   validateDrawBatch,
   validateName,
-  validateChatMessage
+  validateChatMessage,
+  verifyRecaptcha
+
 } = require('../utils/validation');
 
 const {
@@ -18,8 +20,9 @@ function registerHandlers(io, socket) {
   };
 
   // CREATE GAME
-  socket.on('createGame', async (cb) => {
+  socket.on('createGame', async (data,cb) => {
     try {
+      await verifyRecaptcha(data.recaptchaToken);
       const res = await gameManager.createGame(socket.id);
       if (res.ok) {
         socket.join(res.pin);
